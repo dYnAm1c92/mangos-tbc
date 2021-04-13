@@ -356,7 +356,7 @@ ChatCommand* ChatHandler::getCommandTable()
 
     static ChatCommand unlearnCommandTable[] =
     {
-        { "all_gm",         SEC_GAMEMASTER,     false, &ChatHandler::HandleUnLearnAllGMCommand,        "", nullptr },
+        { "all_gm",         SEC_ADMINISTRATOR,     false, &ChatHandler::HandleUnLearnAllGMCommand,        "", nullptr },
         { "",               SEC_ADMINISTRATOR,  false, &ChatHandler::HandleUnLearnCommand,             "", nullptr },
         { nullptr,          0,                  false, nullptr,                                        "", nullptr }
     };
