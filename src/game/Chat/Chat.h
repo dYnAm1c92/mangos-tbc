@@ -438,6 +438,7 @@ class ChatHandler
         bool ModifyMountCommandHelper(Player* target, char* args);
         bool ModifyStatCommandHelper(char* args, char const* statName, uint32 spellId);
         bool HandleReplenishCommand(char* args);
+        bool HandleGroupReplenishCommand(char* args);
 
         //-----------------------Npc Commands-----------------------
         bool HandleNpcAddCommand(char* args);
@@ -678,6 +679,7 @@ class ChatHandler
         bool HandleCooldownClearClientSideCommand(char* args);
         bool HandleCooldownClearArenaCommand(char* args);
         bool HandleUnLearnCommand(char* args);
+        bool HandleUnLearnAllGMCommand(char* args);
         bool HandleGetDistanceCommand(char* args);
         bool HandleGetLosCommand(char* args);
         bool HandleModifyStandStateCommand(char* args);
