@@ -1512,6 +1512,64 @@ bool ChatHandler::HandleLearnAllGMCommand(char* /*args*/)
     return true;
 }
 
+bool ChatHandler::HandleUnLearnAllGMCommand(char* /*args*/)
+{
+    static uint32 gmSpellList[] =
+    {
+        11,     // Frostbolt of Ages                1000 damage, no cooldown
+        13,     // Swim Speed (TEST)
+        26,     // Bind Self (TEST)                 sets hearthstone to current location
+        47,     // Sprint (TEST)
+        260,    // Charm (TEST)
+        265,    // Area Death (TEST)
+        530,    // Charm (Possess)
+        1908,   // Uber Heal Over Time
+        2583,   // Debug Spell Reflection (Debug)
+        2650,   // Tame Pet (TEST)
+        2653,   // Damage 100 (TEST)
+        2654,   // Summon Tamed (TEST)
+        5259,   // Disarm (TEST)
+        5696,   // Charge (TEST)
+        9454,   // Freeze                           permanent stun, useful for holding misbehaving players
+        10032,  // Uber Stealth
+        18800,  // Light Test
+        18209,  // Test Grow
+        18210,  // Test Shrink
+        23452,  // Invisibility
+        23775,  // Stun Forever
+        24199,  // Knockback 35
+        35182,  // Banish
+        35874,  // Master Buff (Physical)           525 AP, +14 all stats, 10% to all stats
+        35912,  // Master Buff (Magical)            54 Int, 49 mp/5, 10% to all stats
+        38505,  // Shackle
+        38734,  // Master Ranged Buff               220 Ranged AP, +18 all stats, 10% to all stats
+        39258,  // Automation Root Spell (QAE)      AoE permanent root
+        40678,  // Super Jump
+        40733,  // Divine Shield                    infinite duration bubble
+        43097,  // Summon All Players
+        45590,  // QA DoT Debug 1000                1000 damage per tick for 30 seconds, stackable
+        45813,  // QA Debug Instant Cast Buff
+        46876,  // QAE Drunk Effect
+        0
+    };
+
+    for (uint32 spell : gmSpellList)
+    {
+        SpellEntry const* spellInfo = sSpellTemplate.LookupEntry<SpellEntry>(spell);
+        if (!spellInfo || !SpellMgr::IsSpellValid(spellInfo, m_session->GetPlayer()))
+        {
+            PSendSysMessage(LANG_COMMAND_SPELL_BROKEN, spell);
+            continue;
+        }
+
+        if (m_session->GetPlayer()->HasSpell(spell))
+            m_session->GetPlayer()->removeSpell(spell, false, false);
+    }
+
+    SendSysMessage(LANG_FORGET_SPELL);
+    return true;
+}
+
 bool ChatHandler::HandleLearnAllMyClassCommand(char* /*args*/)
 {
     HandleLearnAllMySpellsCommand((char*)"");
@@ -6939,6 +6997,37 @@ bool ChatHandler::HandleReplenishCommand(char* args)
     if (target->GetPowerType() == POWER_MANA)
         target->SetPower(POWER_MANA, target->GetMaxPower(POWER_MANA));
 
+    return true;
+}
+
+bool ChatHandler::HandleGroupReplenishCommand(char* args)
+{
+    Player* pPlayer = m_session->GetPlayer();
+    Group* pGroup = pPlayer->GetGroup();
+    if (!pGroup)
+    {
+        SendSysMessage("You are not in a group.");
+        SetSentErrorMessage(true);
+        return false;
+    }
+
+    for (GroupReference* itr = pGroup->GetFirstMember(); itr != nullptr; itr = itr->next())
+    {
+        if (Player* pMember = itr->getSource())
+        {
+            if (pMember == pPlayer)
+                continue;
+
+            if (pMember->IsAlive())
+            {
+                pMember->SetHealth(pMember->GetMaxHealth());
+                if (pMember->GetPowerType() == POWER_MANA)
+                    pMember->SetPower(POWER_MANA, pMember->GetMaxPower(POWER_MANA));
+            }
+        }
+    }
+
+    PSendSysMessage("Replenished all group members.");
     return true;
 }
 

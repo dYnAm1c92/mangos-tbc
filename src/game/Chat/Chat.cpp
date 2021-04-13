@@ -354,6 +354,13 @@ ChatCommand* ChatHandler::getCommandTable()
         { nullptr,          0,                  false, nullptr,                                        "", nullptr }
     };
 
+    static ChatCommand unlearnCommandTable[] =
+    {
+        { "all_gm",         SEC_GAMEMASTER,     false, &ChatHandler::HandleUnLearnAllGMCommand,        "", nullptr },
+        { "",               SEC_ADMINISTRATOR,  false, &ChatHandler::HandleUnLearnCommand,             "", nullptr },
+        { nullptr,          0,                  false, nullptr,                                        "", nullptr }
+    };
+
     static ChatCommand linkCommandTable[] =
     {
         { "add",            SEC_ADMINISTRATOR,  false, &ChatHandler::HandleLinkAddCommand,             "", nullptr },
@@ -954,6 +961,8 @@ ChatCommand* ChatHandler::getCommandTable()
         { "quit",           SEC_CONSOLE,        true,  &ChatHandler::HandleQuitCommand,                "", nullptr },
         { "mmap",           SEC_GAMEMASTER,     false, nullptr,                                        "", mmapCommandTable },
         { "worldstate",     SEC_ADMINISTRATOR,  false, nullptr,                                        "", worldStateTable },
+        { "replenish",      SEC_ADMINISTRATOR,  false, &ChatHandler::HandleReplenishCommand,           "", nullptr },
+        { "greplenish",     SEC_ADMINISTRATOR,  false, &ChatHandler::HandleGroupReplenishCommand,      "", nullptr },
 #ifdef BUILD_PLAYERBOT
         { "bot",            SEC_PLAYER,         false, &ChatHandler::HandlePlayerbotCommand,           "", nullptr },
 #endif
