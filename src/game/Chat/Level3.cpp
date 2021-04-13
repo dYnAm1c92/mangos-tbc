@@ -6924,6 +6924,24 @@ bool ChatHandler::ModifyStatCommandHelper(char* args, char const* statName, uint
     return true;
 }
 
+bool ChatHandler::HandleReplenishCommand(char* args)
+{
+    Unit* target = getSelectedUnit();
+    if (!target || !target->IsAlive())
+    {
+        SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
+        SetSentErrorMessage(true);
+        return false;
+    }
+
+    target->SetHealth(target->GetMaxHealth());
+
+    if (target->GetPowerType() == POWER_MANA)
+        target->SetPower(POWER_MANA, target->GetMaxPower(POWER_MANA));
+
+    return true;
+}
+
 bool ChatHandler::HandleModifyStrengthCommand(char *args)
 {
     return ModifyStatCommandHelper(args, "Strength", SPELL_MOD_STRENGTH);
