@@ -650,7 +650,7 @@ struct npc_colonel_julesAI : public ScriptedAI
 
         if (m_bReturnHome)
         {
-            if (uiPointId == 6)
+            if (uiPointId == 7)
             {
                 m_creature->SetLevitate(false);
                 m_creature->GetMotionMaster()->Clear();
@@ -661,8 +661,8 @@ struct npc_colonel_julesAI : public ScriptedAI
                 EndEvent();
             }
         }
-        else if (uiPointId == 4)
-            m_creature->GetMotionMaster()->SetNextWaypoint(0);
+        else if (uiPointId == 5)
+            m_creature->GetMotionMaster()->SetNextWaypoint(1);
     }
 
     void JustSummoned(Creature* pSummoned) override
@@ -854,7 +854,7 @@ struct npc_anchorite_baradaAI : public ScriptedAI, private DialogueHelper
 
         switch (uiPointId)
         {
-            case 1:
+            case 2:
                 // pause wp and resume dialogue
                 m_creature->addUnitState(UNIT_STAT_WAYPOINT_PAUSED);
 
@@ -866,7 +866,7 @@ struct npc_anchorite_baradaAI : public ScriptedAI, private DialogueHelper
 
                 StartNextDialogueText(TEXT_ID_POSSESSED);
                 break;
-            case 3:
+            case 4:
                 // event completed - wait for player to get quest credit by gossip
                 if (Creature* pColonel = m_creature->GetMap()->GetCreature(m_colonelGuid))
                     m_creature->SetFacingToObject(pColonel);
@@ -1131,14 +1131,9 @@ struct npc_magister_aledisAI : public RangedCombatAI
         Reset();
     }
 
-    bool m_bIsDefeated;
-    bool m_bAllyAttacker;
-
     void Reset() override
     {
         RangedCombatAI::Reset();
-        m_bAllyAttacker = false;
-        m_bIsDefeated = false;
 
         SetCombatMovement(true);
         SetCombatScriptStatus(false);
@@ -1167,37 +1162,6 @@ struct npc_magister_aledisAI : public RangedCombatAI
             SetDeathPrevention(true);
     }
 
-    void EvadeReset()
-    {
-        m_bAllyAttacker = false;
-        m_creature->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER);
-    }
-
-    void EnterEvadeMode() override
-    {
-        m_creature->RemoveAllAurasOnEvade();
-        m_creature->CombatStop(true);
-
-        if (!m_bIsDefeated)
-            m_creature->LoadCreatureAddon(true);
-
-        if (m_creature->IsAlive())
-        {
-            if (!m_bIsDefeated)
-            {
-                m_creature->SetWalk(true);
-                m_creature->GetMotionMaster()->MoveWaypoint();
-            }
-            else
-            {
-                m_creature->GetMotionMaster()->MoveIdle();
-                EvadeReset();
-            }
-        }
-
-        m_creature->SetLootRecipient(nullptr);
-    }
-
     void ExecuteAction(uint32 action) override
     {
         switch (action)
@@ -1207,13 +1171,12 @@ struct npc_magister_aledisAI : public RangedCombatAI
                 if (m_creature->GetHealthPercent() > 20.0f || m_creature->getFaction() != FACTION_ALLEDIS_HOSTILE)
                     return;
 
-                // evade when defeated; faction is reset automatically
-                m_bIsDefeated = true;
                 m_creature->SetFactionTemporary(FACTION_ALLEDIS_FRIENDLY, TEMPFACTION_RESTORE_RESPAWN);
-                EnterEvadeMode();
+                m_creature->CombatStopWithPets(true);
+                m_creature->GetMotionMaster()->MoveIdle();
+                m_creature->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
                 m_creature->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER);
                 SetReactState(REACT_PASSIVE);
-
                 DoScriptText(SAY_ALEDIS_DEFEAT, m_creature);
                 m_creature->ForcedDespawn(30000);
                 return;

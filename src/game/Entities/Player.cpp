@@ -7873,7 +7873,7 @@ void Player::CastItemCombatSpell(Unit* Target, WeaponAttackType attType, bool sp
         }
 
         // check if spell is under CD. TODO : this may be fixed in better way using TRIGGERED_ITEM_TRIGGERED enum for castspell
-        if (!IsSpellReady(*spellInfo, proto))
+        if (HasGCD(spellInfo) || !IsSpellReady(*spellInfo, proto))
             return;
 
         // not allow proc extra attack spell at extra attack
@@ -7964,7 +7964,7 @@ void Player::CastItemUseSpell(Item* item, SpellCastTargets& targets, uint8 cast_
         }
 
         Spell* spell = new Spell(this, spellInfo, TRIGGERED_NONE);
-        spell->m_CastItem = item;
+        spell->SetCastItem(item);
         item->SetUsedInSpell(true);
         spell->m_cast_count = cast_count;                   // set count of casts
         spell->m_currentBasePoints[EFFECT_INDEX_0] = learning_spell_id;
@@ -8001,7 +8001,7 @@ void Player::CastItemUseSpell(Item* item, SpellCastTargets& targets, uint8 cast_
             targets.setUnitTarget(GetTarget());
 
         Spell* spell = new Spell(this, spellInfo, (count > 0));
-        spell->m_CastItem = item;
+        spell->SetCastItem(item);
         item->SetUsedInSpell(true);
         spell->m_cast_count = cast_count;                   // set count of casts
         spell->SpellStart(&targets);
@@ -20968,45 +20968,16 @@ void Player::UpdateTerainEnvironmentFlags(Map* m, float x, float y, float z)
 
         if (liquid && liquid->SpellId)
         {
-            // Exception for SSC water
-            uint32 liquidSpellId = liquid->SpellId == 37025 ? 37284 : liquid->SpellId;
-
             if (res & (LIQUID_MAP_UNDER_WATER | LIQUID_MAP_IN_WATER))
             {
-                if (!HasAura(liquidSpellId))
-                {
-                    // Handle exception for SSC water
-                    if (liquid->SpellId == 37025)
-                    {
-                        if (InstanceData* pInst = GetInstanceData())
-                        {
-                            if (pInst->CheckConditionCriteriaMeet(this, INSTANCE_CONDITION_ID_LURKER, nullptr, CONDITION_FROM_HARDCODED))
-                            {
-                                if (pInst->CheckConditionCriteriaMeet(this, INSTANCE_CONDITION_ID_SCALDING_WATER, nullptr, CONDITION_FROM_HARDCODED))
-                                    CastSpell(this, liquidSpellId, TRIGGERED_OLD_TRIGGERED);
-                                else
-                                {
-                                    SummonCreature(21508, 0, 0, 0, 0, TEMPSPAWN_TIMED_OOC_DESPAWN, 2000);
-                                    // Special update timer for the SSC water
-                                    m_positionStatusUpdateTimer = 2000;
-                                }
-                            }
-                        }
-                    }
-                    else
-                        CastSpell(this, liquidSpellId, TRIGGERED_OLD_TRIGGERED);
-                }
+                if (!HasAura(liquid->SpellId))
+                    CastSpell(this, liquid->SpellId, TRIGGERED_OLD_TRIGGERED);
             }
             else
-                RemoveAurasDueToSpell(liquidSpellId);
+                RemoveAurasDueToSpell(liquid->SpellId);
         }
 
         m_lastLiquid = liquid;
-    }
-    else if (m_lastLiquid && m_lastLiquid->SpellId)
-    {
-        RemoveAurasDueToSpell(m_lastLiquid->SpellId == 37025 ? 37284 : m_lastLiquid->SpellId);
-        m_lastLiquid = nullptr;
     }
 
     // All liquid types: check under surface level

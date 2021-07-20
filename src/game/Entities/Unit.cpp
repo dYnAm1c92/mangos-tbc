@@ -1426,7 +1426,7 @@ SpellCastResult Unit::CastSpell(Unit* Victim, SpellEntry const* spellInfo, uint3
         if (WorldObject* caster = spell->GetCastingObject())
             targets.setSource(caster->GetPositionX(), caster->GetPositionY(), caster->GetPositionZ());
 
-    spell->m_CastItem = castItem;
+    spell->SetCastItem(castItem);
     return spell->SpellStart(&targets, triggeredByAura);
 }
 
@@ -1481,7 +1481,7 @@ SpellCastResult Unit::CastCustomSpell(Unit* Victim, SpellEntry const* spellInfo,
 
     SpellCastTargets targets;
     targets.setUnitTarget(Victim);
-    spell->m_CastItem = castItem;
+    spell->SetCastItem(castItem);
 
     if (spellInfo->Targets & TARGET_FLAG_DEST_LOCATION)
         targets.setDestination(Victim->GetPositionX(), Victim->GetPositionY(), Victim->GetPositionZ());
@@ -1545,7 +1545,7 @@ SpellCastResult Unit::CastSpell(float x, float y, float z, SpellEntry const* spe
     if (!(targets.m_targetMask & (TARGET_FLAG_DEST_LOCATION | TARGET_FLAG_SOURCE_LOCATION)))
         targets.setDestination(x, y, z);
 
-    spell->m_CastItem = castItem;
+    spell->SetCastItem(castItem);
     return spell->SpellStart(&targets, triggeredByAura);
 }
 
@@ -1573,7 +1573,7 @@ SpellCastResult Unit::CastSpell(SpellCastTargets& targets, SpellEntry const* spe
 
     Spell* spell = new Spell(this, spellInfo, triggeredFlags, originalCaster, triggeredBy);
 
-    spell->m_CastItem = castItem;
+    spell->SetCastItem(castItem);
     return spell->SpellStart(&targets, triggeredByAura);
 }
 
@@ -1610,7 +1610,7 @@ SpellCastResult Unit::CastCustomSpell(SpellCastTargets& targets, SpellEntry cons
     if (bp2)
         spell->m_currentBasePoints[EFFECT_INDEX_2] = *bp2;
 
-    spell->m_CastItem = castItem;
+    spell->SetCastItem(castItem);
     return spell->SpellStart(&targets, triggeredByAura);
 }
 
@@ -9851,7 +9851,7 @@ void CharmInfo::ProcessUnattackableTargets()
 
         for (auto attacker : friendlyTargets)
         {
-            attacker->AttackStop(true, true);
+            attacker->AttackStop(true);
             attacker->getThreatManager().modifyThreatPercent(m_unit, -101);
         }
     }
@@ -9870,7 +9870,7 @@ void CharmInfo::ProcessUnattackableTargets()
 
         for (auto attacker : friendlyTargets)
         {
-            attacker->AttackStop(true, true);
+            attacker->AttackStop(true);
             attacker->getThreatManager().modifyThreatPercent(m_unit, -101);
         }
     }
@@ -10208,27 +10208,9 @@ void Unit::InterruptMoving(bool forceSendStop /*=false*/)
 
     if (!movespline->Finalized())
     {
-        Movement::Location computedLoc = movespline->ComputePosition();
-        Position pos(computedLoc.x, computedLoc.y, computedLoc.z, computedLoc.orientation);
-        if (GenericTransport* transport = GetTransport())
-        {
-            m_movementInfo.UpdateTransportData(pos);
-            transport->CalculatePassengerPosition(pos.x, pos.y, pos.z, &pos.o);
-        }
-
-        if (movespline->isFacing() && movespline->isFacingTarget())
-        {
-            if (Unit const* target = ObjectAccessor::GetUnit(*this, ObjectGuid(movespline->GetFacing().target)))
-                pos.o = GetAngle(target);
-            else
-            {
-                float angle = atan2((pos.y - GetPositionY()), (pos.x - GetPositionX()));
-                pos.o = (angle >= 0 ? angle : ((2 * M_PI_F) + angle));
-            }
-        }
+        UpdateSplinePosition(true);
 
         movespline->_Interrupt();
-        Relocate(pos.x, pos.y, pos.z, pos.o);
         isMoving = true;
     }
 
@@ -11354,33 +11336,11 @@ void Unit::UpdateSplineMovement(uint32 t_diff)
     if (m_movesplineTimer.Passed() || arrived)
     {
         m_movesplineTimer.Reset(POSITION_UPDATE_DELAY);
-        Movement::Location computedLoc = movespline->ComputePosition();
-        Position pos(computedLoc.x, computedLoc.y, computedLoc.z, computedLoc.orientation);
-        if (GenericTransport* transport = GetTransport())
-        {
-            m_movementInfo.UpdateTransportData(pos);
-            transport->CalculatePassengerPosition(pos.x, pos.y, pos.z, &pos.o);
-        }
-
-        if (movespline->isFacing() && movespline->isFacingTarget())
-        {
-            if (Unit const* target = ObjectAccessor::GetUnit(*this, ObjectGuid(movespline->GetFacing().target)))
-                pos.o = GetAngle(target);
-            else
-            {
-                float angle = atan2((pos.y - GetPositionY()), (pos.x - GetPositionX()));
-                pos.o = (angle >= 0 ? angle : ((2 * M_PI_F) + angle));
-            }
-        }
-
-        if (GetTypeId() == TYPEID_PLAYER)
-            ((Player*)this)->SetPosition(pos.x, pos.y, pos.z, pos.o);
-        else
-            GetMap()->CreatureRelocation((Creature*)this, pos.x, pos.y, pos.z, pos.o);
+        UpdateSplinePosition();
     }
 }
 
-void Unit::UpdateSplinePosition()
+void Unit::UpdateSplinePosition(bool relocateOnly)
 {
     Movement::Location computedLoc = movespline->ComputePosition();
     Position pos(computedLoc.x, computedLoc.y, computedLoc.z, computedLoc.orientation);
@@ -11389,18 +11349,46 @@ void Unit::UpdateSplinePosition()
         m_movementInfo.UpdateTransportData(pos);
         transport->CalculatePassengerPosition(pos.x, pos.y, pos.z, &pos.o);
     }
-    if (GenericTransport* transport = GetTransport())
-        transport->CalculatePassengerPosition(pos.x, pos.y, pos.z, &pos.o);
 
-    if (movespline->isFacing() && movespline->isFacingTarget())
+    bool faced = false;
+    if (movespline->isFacing())
     {
-        if (Unit const* target = ObjectAccessor::GetUnit(*this, ObjectGuid(movespline->GetFacing().target)))
-            pos.o = GetAngle(target);
+        if (movespline->isFacingTarget())
+        {
+            if (Unit const* target = ObjectAccessor::GetUnit(*this, ObjectGuid(movespline->GetFacing().target)))
+            {
+                pos.o = GetAngle(target);
+                faced = true;
+            }
+        }
+        else if (movespline->isFacingPoint())
+        {
+            auto& facing = movespline->GetFacing();
+            pos.o = GetAngle(facing.f.x, facing.f.y);
+            faced = true;
+        }
+        else if (movespline->isFacingAngle())
+        {
+            pos.o = movespline->GetFacing().angle;
+            faced = true;
+        }
+    }
+
+    if (!faced)
+    {
+        if (pos.y == GetPositionY() && pos.x == GetPositionX())
+            pos.o = GetOrientation();
         else
         {
             float angle = atan2((pos.y - GetPositionY()), (pos.x - GetPositionX()));
             pos.o = (angle >= 0 ? angle : ((2 * M_PI_F) + angle));
         }
+    }
+
+    if (relocateOnly)
+    {
+        Relocate(pos.x, pos.y, pos.z, pos.o);
+        return;
     }
 
     if (IsPlayer())

@@ -226,12 +226,12 @@ enum
     POINT_ILLIDAN_FLIGHT_RANDOM     = 1,
     POINT_ILLIDAN_LANDING           = 2,
 
-    POINT_AKAMA_ILLIDAN_CLOSE       = 0,
-    POINT_AKAMA_COUNCIL_DEAD_END    = 1,
-    POINT_AKAMA_DOOR_STOP           = 7,
-    POINT_AKAMA_ILLIDAN_STOP        = 4,
-    POINT_AKAMA_ILLDARI             = 6,
-    POINT_AKAMA_BACK_UP             = 5,
+    POINT_AKAMA_ILLIDAN_CLOSE       = 1,
+    POINT_AKAMA_COUNCIL_DEAD_END    = 2,
+    POINT_AKAMA_DOOR_STOP           = 8,
+    POINT_AKAMA_ILLIDAN_STOP        = 5,
+    POINT_AKAMA_ILLDARI             = 7,
+    POINT_AKAMA_BACK_UP             = 6,
 
     PATH_ID_AKAMA_COUNCIL_DEAD      = 1,
     PATH_ID_AKAMA_COUNCIL_PRE_DOOR  = 2,
@@ -657,6 +657,8 @@ struct boss_illidan_stormrageAI : public CombatAI, private DialogueHelper
             m_creature->RemoveAllAurasOnDeath();
             m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
             m_creature->ClearAllReactives();
+            SetCombatScriptStatus(true);
+            m_creature->SetTarget(nullptr);
 
             DoCastSpellIfCan(nullptr, SPELL_DEATH);
             DoCastSpellIfCan(m_creature, SPELL_TELEPORT_MAIEV, CAST_TRIGGERED);

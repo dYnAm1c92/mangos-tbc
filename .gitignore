@@ -91,3 +91,4 @@ CMakeSettings.json
 
 # recastnavigation directory needs exception
 !dep/recastnavigation/RecastDemo/Build/
+/_build/

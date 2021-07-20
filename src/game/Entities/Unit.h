@@ -44,7 +44,6 @@
 #include "WorldPacket.h"
 #include "Timer.h"
 #include "AI/BaseAI/UnitAI.h"
-#include "PlayerDefines.h"
 #include "Spells/SpellDefines.h"
 
 #include <list>
@@ -2339,7 +2338,7 @@ class Unit : public WorldObject
         
         void OverrideMountDisplayId(uint32 newDisplayId);
 
-        void UpdateSplinePosition();
+        void UpdateSplinePosition(bool relocateOnly = false);
     protected:
 
         struct WeaponDamageInfo
